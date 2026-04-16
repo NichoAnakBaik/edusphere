@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+<body>
+
+<div class="container-fluid mt-4">
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-user-shield"></i> Panel Administrasi</h1>
+        <form action="{{ url_for('logout') }}" method="POST">
+             <button type="submit" class="btn btn-danger btn-sm">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
+        </form>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow">
+                <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">Aksi Cepat</h6></div>
+                <div class="card-body">
+                    <a href="{{ url_for('manage_users') }}" class="btn btn-info btn-icon-split mb-2">
+                        <span class="icon text-white-50"><i class="fas fa-users"></i></span>
+                        <span class="text">Kelola Semua Pengguna</span>
+                    </a>
+                    <a href="{{ url_for('create_class') }}" class="btn btn-success btn-icon-split mb-2">
+                        <span class="icon text-white-50"><i class="fas fa-plus"></i></span>
+                        <span class="text">Buat Kelas Baru</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">Daftar Kelas</h6></div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead><tr><th>ID</th><th>Nama Kelas</th><th>Dosen</th><th>Aksi</th></tr></thead>
+                    <tbody>
+                        {% if kelas_list %}
+                            {% for kelas in kelas_list %}
+                            <tr>
+                                <td>{{ kelas.id_kelas }}</td>
+                                <td>{{ kelas.nama_kelas }}</td>
+                                <td>{{ kelas.nama_dosen or 'Belum Ditentukan' }}</td>
+                                <td>
+                                    <a href="{{ url_for('manage_class_enrollment', kelas_id=kelas.id_kelas) }}" class="btn btn-sm btn-warning">
+                                        <i class="fas fa-user-plus"></i> Kelola Peserta
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                        <tr><td colspan="4" class="text-center">Belum ada kelas yang dibuat.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
