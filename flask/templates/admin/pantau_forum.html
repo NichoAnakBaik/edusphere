@@ -1,32 +1,83 @@
 {% extends 'base.html' %}
-{% block title %}Pantau Forum Diskusi{% endblock %}
+{% block title %}Pantau Forum Admin{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="mb-4">
-        <h2 class="fw-bold"><i class="fas fa-comments text-primary me-2"></i>Pantau Forum Diskusi</h2>
-        <p class="text-muted">Lihat dan awasi percakapan yang terjadi di setiap kelas.</p>
-    </div>
-
-    <div class="row g-4">
-        {% for f in forum_summary %}
-        <div class="col-md-6 col-lg-4">
-            <div class="card shadow-sm border-0 rounded-4">
-                <div class="card-body p-4 d-flex align-items-center">
-                    <div class="bg-info bg-opacity-10 text-info p-3 rounded-circle me-3">
-                        <i class="fas fa-users-class fa-lg"></i>
+<div class="container-fluid p-0">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm rounded-4 bg-danger text-white p-4">
+                <div class="d-flex align-items-center">
+                    <div class="me-4"><i class="fas fa-shield-alt fa-4x opacity-50"></i></div>
+                    <div>
+                        <h2 class="fw-bold mb-1">Control Panel: Pantau Forum</h2>
+                        <p class="mb-0 opacity-75">Sistem moderasi pesan chat ruang diskusi berjenjang mahasiswa Namsan Korean Course.</p>
                     </div>
-                    <div class="flex-grow-1">
-                        <h6 class="fw-bold mb-0">{{ f.nama_kelas }}</h6>
-                        <small class="text-muted">{{ f.total_pesan }} pesan obrolan</small>
-                    </div>
-                    <a href="{{ url_for('admin_forum_detail', id_kelas=f.id_kelas) }}" class="btn btn-light rounded-circle shadow-sm border">
-                        <i class="fas fa-chevron-right text-primary"></i>
-                    </a>
                 </div>
             </div>
         </div>
-        {% endfor %}
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h5 class="fw-bold mb-0"><i class="fas fa-list text-danger me-2"></i>Log Aktivitas Pesan Terakhir</h5>
+            <form method="GET" action="{{ url_for('admin_forum') }}" class="d-flex gap-2">
+                <select name="id_materi" class="form-select form-select-sm rounded-pill" onchange="this.form.submit()">
+                    <option value="">-- Lihat Semua Modul Forum --</option>
+                    {% for f in forum_list %}
+                        <option value="{{ f.id_materi }}" {% if id_materi_aktif == f.id_materi %}selected{% endif %}>Modul {{ f.urutan }}: {{ f.judul_materi }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle border-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 15%;">Waktu Log</th>
+                        <th style="width: 15%;">Pengirim</th>
+                        <th style="width: 10%;">Role</th>
+                        <th style="width: 50%;">Isi Pesan Obrolan (Termafuk Reply)</th>
+                        <th style="width: 10%; text-align: center;">Tindakan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if chat_list %}
+                        {% for c in chat_list %}
+                            <tr>
+                                <td class="small text-muted">{{ c.created_at.strftime('%Y-%m-%d %H:%M') if c.created_at else '' }}</td>
+                                <td><b class="text-dark">{{ c.nama_lengkap }}</b></td>
+                                <td>
+                                    <span class="badge {% if c.role == 'siswa' %}bg-primary{% else %}bg-danger{% endif %} rounded-pill small">
+                                        {{ c.role }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if c.parent_id %}
+                                        <div class="text-muted mb-1 p-1 bg-light border-start border-2 small" style="font-size: 11px;">
+                                            <i class="fas fa-reply me-1"></i> Balas @{{ c.nama_balasan }}: "{{ c.pesan_balasan[:30] }}..."
+                                        </div>
+                                    {% endif %}
+                                    <span class="text-dark">{{ c.pesan }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <form action="{{ url_for('forum_hapus_pesan', id_chat=c.id_chat) }}" method="POST" onsubmit="return confirm('Hapus paksa pesan ini dari database? Action ini permanen.');">
+                                        <input type="hidden" name="id_materi" value="{{ id_materi_aktif }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-bold">
+                                            <i class="fas fa-trash-alt me-1"></i> Drop
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">Tidak ada log chat obrolan yang ditemukan.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 {% endblock %}

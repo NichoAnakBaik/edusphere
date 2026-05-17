@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+{% block title %}Absensi & Logbook Belajar{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm rounded-4 bg-primary text-white p-4">
+                <div class="d-flex align-items-center">
+                    <div class="me-4 d-none d-md-block">
+                        <i class="fas fa-user-clock fa-5x opacity-50"></i>
+                    </div>
+                    <div>
+                        <h2 class="fw-bold mb-1">Absensi & Logbook Belajar</h2>
+                        <p class="mb-0 opacity-75">Mencatat waktu masuk dan keluar belajar harian kamu untuk kalkulasi metrik durasi dari sistem AI AdaptEd.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-12 col-xl-4">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100 text-center d-flex flex-column justify-content-center">
+                <h5 class="fw-bold text-dark mb-2">Status Logbook Hari Ini</h5>
+                <p class="text-muted small mb-4">Pastikan menekan tombol absen keluar setelah selesai melakukan aktivitas belajar.</p>
+                
+                <div class="py-3">
+                    {% if not absen %}
+                        <div class="text-muted mb-4">
+                            <i class="fas fa-toggle-off fa-3x opacity-25 mb-2"></i>
+                            <span class="d-block small">Status: <b>Belum Absen</b></span>
+                        </div>
+                        <form action="{{ url_for('absensi_masuk') }}" method="POST">
+                            <button type="submit" class="btn btn-primary btn-lg rounded-pill px-5 fw-bold shadow">
+                                <i class="fas fa-sign-in-alt me-2"></i>Absen Masuk (Clock In)
+                            </button>
+                        </form>
+                    {% elif absen and not absen.waktu_keluar %}
+                        <div class="text-primary mb-4">
+                            <div class="spinner-grow text-primary spinner-grow-sm me-1" role="status"></div>
+                            <span class="small fw-bold">Status: <b>Sesi Belajar Aktif</b></span>
+                            <small class="d-block text-muted mt-2">Masuk pada: {{ absen.waktu_masuk.strftime('%H:%M:%S') }}</small>
+                        </div>
+                        <form action="{{ url_for('absensi_keluar') }}" method="POST">
+                            <input type="hidden" name="id_absen" value="{{ absen.id_absen }}">
+                            <button type="submit" class="btn btn-danger btn-lg rounded-pill px-5 fw-bold shadow" onclick="return confirm('Selesai sesi belajar harian?');">
+                                <i class="fas fa-sign-out-alt me-2"></i>Absen Keluar (Clock Out)
+                            </button>
+                        </form>
+                    {% else %}
+                        <div class="text-success mb-2">
+                            <i class="fas fa-check-circle fa-3x mb-2"></i>
+                            <span class="d-block fw-bold">Sesi Hari Ini Selesai</span>
+                        </div>
+                        <p class="small text-muted">Kamu telah mencatat total belajar sebanyak <b>{{ absen.durasi_menit }} menit</b> untuk tanggal hari ini.</p>
+                        <button class="btn btn-secondary rounded-pill px-4 fw-bold shadow-sm" disabled>
+                            <i class="fas fa-lock me-1"></i> Absen Terkunci
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-xl-8">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+                <h5 class="fw-bold text-dark mb-4"><i class="fas fa-history text-primary me-2"></i>Riwayat Logbook Aktivitas</h5>
+                
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle border-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 25%;">Tanggal Belajar</th>
+                                <th style="width: 25%;">Waktu Masuk</th>
+                                <th style="width: 25%;">Waktu Keluar</th>
+                                <th style="width: 25%; text-align: center;">Durasi Sesi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if riwayat %}
+                                {% for r in riwayat %}
+                                    <tr>
+                                        <td><b class="text-dark">{{ r.tanggal.strftime('%Y-%m-%d') }}</b></td>
+                                        <td class="small text-muted"><i class="far fa-clock me-1 text-success"></i> {{ r.waktu_masuk.strftime('%H:%M:%S') }}</td>
+                                        <td class="small text-muted">
+                                            {% if r.waktu_keluar %}
+                                                <i class="far fa-clock me-1 text-danger"></i> {{ r.waktu_keluar.strftime('%H:%M:%S') }}
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-1 fw-bold">
+                                                    {{ r.durasi_menit }} Menit
+                                                </span>
+                                            </td>
+                                            {% else %}
+                                                <span class="text-warning"><em>Sesi Berjalan...</em></span>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge bg-warning text-dark rounded-pill px-3 py-1 fw-bold">Tracking</span>
+                                            </td>
+                                            {% endif %}
+                                    </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">Belum ada riwayat aktivitas logbook terdata.</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

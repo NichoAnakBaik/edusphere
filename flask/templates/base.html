@@ -9,13 +9,11 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   
-  <!-- PEMANGGILAN STYLE.CSS DARI FOLDER CSS -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   {% block extra_css %}{% endblock %}
 </head>
 <body>
 
-  <!-- Sidebar Khusus Role -->
   <aside class="sidebar shadow-sm">
     <div class="sidebar-header">
       <a href="{{ url_for('index') }}" class="brand">
@@ -27,22 +25,16 @@
     <div class="sidebar-content">
       <ul class="list-unstyled sidebar-nav">
         
-        <!-- ==============================================
-             MENU UNTUK ADMIN
-             ============================================== -->
         {% if session.get('role') == 'admin' %}
         <li><a class="nav-link" href="{{ url_for('dashboard_admin') }}"><i class="fas fa-border-all"></i><span>Dashboard Admin</span></a></li>
         <li><a class="nav-link" href="{{ url_for('manage_users') }}"><i class="fas fa-users"></i><span>Kelola Pengguna</span></a></li>
         <li><a class="nav-link" href="{{ url_for('admin_kelas') }}"><i class="fas fa-university"></i><span>Manajemen Kelas</span></a></li>
         <li><a class="nav-link" href="{{ url_for('admin_modul') }}"><i class="fas fa-book"></i><span>Upload Modul Belajar</span></a></li>
         <li><a class="nav-link" href="{{ url_for('admin_sertifikat') }}"><i class="fas fa-certificate"></i><span>Approval Sertifikat</span></a></li>
-        <li><a class="nav-link" href="{{ url_for('admin_forum') }}"><i class="fas fa-comments"></i><span>Pantau Forum</span></a></li>
-        <li><a class="nav-link" href="{{ url_for('admin_enrollment') }}"><i class="fas fa-user-graduate"></i><span>Plotting Siswa</span></a>
-      </li>
+        <li><a class="nav-link" href="{{ url_for('forum') }}"><i class="fas fa-comments"></i><span>Pantau Forum</span></a></li>
+        <li><a class="nav-link" href="{{ url_for('admin_enrollment') }}"><i class="fas fa-user-graduate"></i><span>Plotting Siswa</span></a></li>
+        <li><a class="nav-link" href="{{ url_for('admin_absensi') }}"><i class="fas fa-user-check"></i><span>Manajemen Absensi</span></a></li>
         
-        <!-- ==============================================
-             MENU UNTUK PENGAJAR
-             ============================================== -->
         {% elif session.get('role') == 'pengajar' %}
         <li class="px-3 mt-4 mb-2 text-uppercase text-muted fw-bold" style="font-size: 0.75rem; letter-spacing: 1px;">Menu Pengajar</li>
         
@@ -52,7 +44,7 @@
             </a>
         </li>
         <li>
-            <a class="nav-link {% if request.endpoint == 'pengajar_kelas' %}active{% endif %}" href="{{ url_for('pengajar_kelas') }}">
+            <a class="nav-link {% if request.endpoint == 'pengajar_kelas_siswa' %}active{% endif %}" href="{{ url_for('pengajar_kelas_siswa') }}">
                 <i class="fas fa-users"></i><span>Kelas & Siswa</span>
             </a>
         </li>
@@ -67,7 +59,7 @@
             </a>
         </li>
         <li>
-            <a class="nav-link {% if request.endpoint == 'pengajar_forum' %}active{% endif %}" href="{{ url_for('pengajar_forum') }}">
+            <a class="nav-link {% if request.endpoint == 'forum' %}active{% endif %}" href="{{ url_for('forum') }}">
                 <i class="fas fa-comments"></i><span>Forum Kelas</span>
             </a>
         </li>
@@ -77,17 +69,16 @@
             </a>
         </li>
 
-        <!-- ==============================================
-             MENU UNTUK SISWA
-             ============================================== -->
         {% elif session.get('role') == 'siswa' %}
+        <li class="px-3 mt-4 mb-2 text-uppercase text-muted fw-bold" style="font-size: 0.75rem; letter-spacing: 1px;">Menu Siswa</li>
+        
         <li><a class="nav-link" href="{{ url_for('dashboard_siswa') }}"><i class="fas fa-border-all"></i><span>Dashboard</span></a></li>
-        <li><a class="nav-link" href="{{ url_for('materi') }}"><i class="fas fa-book-open"></i><span>Modul Belajar</span></a></li>
-        <li><a class="nav-link" href="{{ url_for('kuis_siswa') }}"><i class="fas fa-pen-nib"></i><span>Kuis & Ujian</span></a></li>
-        <li><a class="nav-link" href="#"><i class="fas fa-comments"></i><span>Forum Kelas</span></a></li>
-        <li><a class="nav-link" href="#"><i class="fas fa-user-check"></i><span>Absensi & Logbook</span></a></li>
-        <li><a class="nav-link" href="#"><i class="fas fa-certificate"></i><span>Sertifikat Level</span></a></li>
-        <li><a class="nav-link text-info" href="#"><i class="fas fa-brain"></i><span>Analitik & AI</span></a></li>
+        <li><a class="nav-link" href="{{ url_for('siswa_modul') }}"><i class="fas fa-book-open"></i><span>Modul Belajar</span></a></li>
+        <li><a class="nav-link" href="{{ url_for('daftar_kuis_siswa') }}"><i class="fas fa-pen-nib"></i><span>Kuis & Ujian</span></a></li>
+        <li><a class="nav-link" href="{{ url_for('forum') }}"><i class="fas fa-comments"></i><span>Forum Kelas</span></a></li>
+        <li><a class="nav-link" href="{{ url_for('siswa_absensi') }}"><i class="fas fa-user-check"></i><span>Absensi & Logbook</span></a></li>
+        <li><a class="nav-link" href="{{ url_for('siswa_sertifikat') }}"><i class="fas fa-certificate"></i><span>Sertifikat Level</span></a></li>
+        <li><a class="nav-link text-primary fw-bold" href="{{ url_for('siswa_ai') }}"><i class="fas fa-brain"></i><span>Analitik & AI</span></a></li>
         {% endif %}
 
       </ul>
@@ -107,7 +98,6 @@
     </div>
   </aside>
 
-  <!-- Main Content Area -->
   <div class="main-content">
     <header class="top-bar">
       <div class="d-flex align-items-center gap-3 ms-auto">
@@ -131,7 +121,6 @@
     </header>
 
     <main class="content-area">
-      <!-- Tempat Pesan Sukses/Error -->
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
           {% for category, message in messages %}
@@ -143,14 +132,12 @@
         {% endif %}
       {% endwith %}
 
-      <!-- Konten Utama Halaman -->
       {% block content %}{% endblock %}
     </main>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   
-  <!-- Skrip Otomatis Aktif Menu -->
   <script>
     document.addEventListener("DOMContentLoaded", function () {
       const navLinks = document.querySelectorAll(".nav-link");

@@ -1,265 +1,174 @@
 {% extends 'base.html' %}
-
-{% block title %}Forum Tanya Jawab{% endblock %}
+{% block title %}Forum Kelas{% endblock %}
 
 {% block content %}
-<style>
-    /* Style asli Anda dipertahankan, dengan beberapa tambahan untuk interaktivitas */
-    .forum-container {
-        max-width: 800px;
-        margin: 0 auto;
-    }
-    
-    .forum-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 20px;
-    }
-    
-    .forum-title {
-        font-size: 1.8rem;
-        font-weight: bold;
-        color: var(--dark);
-    }
-    
-    .compose-post {
-        background-color: white;
-        border-radius: 10px;
-        padding: 20px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        margin-bottom: 20px;
-    }
-    
-    .compose-post textarea {
-        width: 100%;
-        border: 1px solid #e1e8ed;
-        border-radius: 8px;
-        padding: 15px;
-        font-size: 16px;
-        height: 100px;
-        resize: vertical; /* Membiarkan user bisa resize vertikal */
-        margin-bottom: 15px;
-        outline: none;
-        transition: border-color 0.2s;
-    }
-    
-    .compose-post textarea:focus {
-        border-color: var(--primary);
-    }
-    
-    .compose-post textarea::placeholder {
-        color: #95a5a6;
-    }
-    
-    .post-actions {
-        display: flex;
-        justify-content: flex-end;
-    }
-    
-    .post-btn {
-        background-color: var(--primary);
-        color: white;
-        border: none;
-        border-radius: 30px;
-        padding: 8px 20px;
-        font-weight: bold;
-        cursor: pointer;
-        transition: background-color 0.2s;
-    }
-    
-    .post-btn:hover {
-        background-color: var(--primary-dark);
-    }
-    
-    .post {
-        background-color: white;
-        border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-        transition: all 0.3s ease;
-    }
-
-    .post:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-    }
-    
-    .post-header {
-        display: flex;
-        align-items: center;
-        margin-bottom: 15px;
-    }
-    
-    .avatar {
-        width: 48px;
-        height: 48px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 12px;
-        color: white;
-        font-weight: bold;
-        flex-shrink: 0; /* Mencegah avatar menyusut */
-    }
-    
-    .avatar.dosen { background-color: var(--primary); }
-    .avatar.mahasiswa { background-color: var(--secondary); }
-    
-    .user-info .name { font-weight: bold; color: var(--dark); }
-    .user-info .role { color: var(--gray); font-size: 14px; }
-    
-    .post-content { margin-bottom: 15px; line-height: 1.6; color: #333; }
-    .post-timestamp { color: var(--gray); font-size: 14px; margin-bottom: 15px; }
-    
-    .post-actions-bar {
-        display: flex;
-        gap: 20px;
-        margin-bottom: 15px;
-        color: var(--gray);
-        border-bottom: 1px solid #f0f0f0;
-        padding-bottom: 15px;
-    }
-    
-    .post-action { display: flex; align-items: center; cursor: pointer; transition: color 0.2s; }
-    .post-action:hover { color: var(--primary); }
-    .post-action i { margin-right: 5px; }
-    
-    .comments-section { margin-top: 15px; }
-    .comment { display: flex; margin-bottom: 15px; padding: 10px; }
-    
-    .comment-avatar {
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 10px;
-        color: white;
-        font-weight: bold;
-        font-size: 12px;
-        flex-shrink: 0;
-    }
-    
-    .comment-avatar.dosen { background-color: var(--primary); }
-    .comment-avatar.mahasiswa { background-color: var(--secondary); }
-    
-    .comment-content { flex: 1; background-color: #f8f9fa; border-radius: 8px; padding: 10px; }
-    .comment-user { font-weight: bold; margin-bottom: 3px; color: var(--dark); }
-    .comment-text { color: #333; }
-    .comment-time { font-size: 12px; color: var(--gray); margin-top: 3px; }
-    
-    .reply-form { display: flex; margin-top: 15px; align-items: center; border-top: 1px solid #f0f0f0; padding-top: 15px; }
-    .reply-form textarea {
-        flex: 1; border: 1px solid #e1e8ed; border-radius: 20px; padding: 10px 15px;
-        resize: none; height: 42px;
-        outline: none; transition: all 0.2s ease;
-    }
-    
-    .reply-form textarea:focus { border-color: var(--primary); height: 60px; }
-    .reply-form textarea::placeholder { color: #95a5a6; }
-    
-    .reply-btn {
-        background-color: var(--primary); color: white; border: none; border-radius: 50%;
-        width: 40px; height: 40px; margin-left: 10px;
-        cursor: pointer; transition: background-color 0.2s;
-        display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-    }
-    .reply-btn:hover { background-color: var(--primary-dark); }
-    
-    .empty-state { text-align: center; padding: 40px 0; color: var(--gray); }
-    .empty-state i { font-size: 3rem; margin-bottom: 15px; }
-
-    .animate-on-scroll {
-        opacity: 0;
-        transform: translateY(20px);
-        transition: opacity 0.6s ease-out, transform 0.6s ease-out;
-    }
-    .animate-on-scroll.visible {
-        opacity: 1;
-        transform: translateY(0);
-    }
-</style>
-
-<div class="forum-container">
-    <div class="forum-header">
-        <h1 class="forum-title"><i class="fas fa-comments text-primary"></i> Forum Tanya Jawab</h1>
-    </div>
-    
-    <div class="compose-post animate-on-scroll">
-        <form method="POST" action="{{ url_for('forum') }}">
-            <textarea name="content" placeholder="Ajukan pertanyaan atau berbagi informasi..." required></textarea>
-            <div class="post-actions">
-                <button type="submit" class="post-btn"><i class="fas fa-paper-plane me-2"></i>Kirim</button>
+<div class="position-fixed bottom-0 end-0 bg-white" style="top: 60px; left: 260px; overflow: hidden; z-index: 10; border-top: 1px solid #dee2e6;">
+    <div class="d-flex h-100 w-100 flex-row flex-nowrap" style="width: calc(100vh); min-width: calc(100vw - 260px);">
+        
+        <div class="bg-white h-100 d-flex flex-column border-end" style="width: 320px; flex-shrink: 0;">
+            <div class="p-4 bg-white border-bottom" style="flex-shrink: 0;">
+                <h5 class="fw-bold text-dark mb-1">
+                    {% if session.get('role') == 'admin' %}
+                        <i class="fas fa-shield-alt text-danger me-2"></i>Pantau Forum
+                    {% elif session.get('role') == 'pengajar' %}
+                        <i class="fas fa-chalkboard-teacher text-primary me-2"></i>Moderasi Forum
+                    {% else %}
+                        <i class="fas fa-comments text-primary me-2"></i>Forum Diskusi
+                    {% endif %}
+                </h5>
+                <p class="text-muted small mb-0">
+                    {% if session.get('role') == 'admin' %}
+                        Mode Administrator
+                    {% else %}
+                        Pilih materi bab diskusi.
+                    {% endif %}
+                </p>
             </div>
-        </form>
-    </div>
-
-    <div class="posts-container">
-        {% if posts %}
-            {% for item in posts %}
-            <div class="post animate-on-scroll">
-                <div class="post-header">
-                    <div class="avatar {{ item.role.lower() }}">{{ item.username[0].upper() }}</div>
-                    <div class="user-info">
-                        <span class="name">{{ item.username }}</span>
-                        <span class="role">{{ item.role|capitalize }}</span>
-                    </div>
-                </div>
-                <div class="post-content">{{ item.content | safe }}</div>
-                <div class="post-timestamp">{{ item.created_at|format_datetime }}</div>
-                
-                <div class="post-actions-bar">
-                    <div class="post-action"><i class="far fa-comment"></i> <span>{{ item.comments|length }} Komentar</span></div>
-                    <div class="post-action"><i class="far fa-thumbs-up"></i> Suka</div>
-                    <div class="post-action"><i class="far fa-bookmark"></i> Simpan</div>
-                </div>
-
-                <div class="comments-section">
-                    {% for comment in item.comments %}
-                    <div class="comment">
-                        <div class="comment-avatar {{ comment.role.lower() }}">{{ comment.username[0].upper() }}</div>
-                        <div class="comment-content">
-                            <div class="comment-user">{{ comment.username }}</div>
-                            <div class="comment-text">{{ comment.content | safe }}</div>
-                            <div class="comment-time">{{ comment.created_at|format_datetime }}</div>
-                        </div>
-                    </div>
+            
+            <div class="p-3 d-flex flex-column gap-2 overflow-auto" style="flex-grow: 1; background-color: #fafafa;">
+                {% if forum_list %}
+                    {% for f in forum_list %}
+                        <a href="{{ url_for('forum', id_materi=f.id_materi) }}" 
+                           class="d-flex align-items-center p-3 rounded-4 text-decoration-none custom-channel-btn {% if id_materi_aktif == f.id_materi %}channel-active{% endif %}">
+                            <div class="avatar-initials bg-primary text-white rounded-3 me-3 fw-bold shadow-sm" style="width: 36px; height: 36px; display:inline-flex; align-items:center; justify-content:center; font-size:12px;">
+                                M{{ f.urutan }}
+                            </div>
+                            <div class="flex-grow-1 overflow-hidden">
+                                <span class="d-block text-dark small text-truncate mb-0 {% if id_materi_aktif == f.id_materi %}fw-bold text-primary{% endif %}">{{ f.judul_materi }}</span>
+                                <span class="text-muted small" style="font-size: 11px;">
+                                    {% if session.get('role') == 'siswa' %}<i class="far fa-comment me-1"></i>Tanya Kelas{% else %}<i class="fas fa-eye me-1"></i>Lihat Chat{% endif %}
+                                </span>
+                            </div>
+                            <i class="fas fa-chevron-right ms-2 opacity-50" style="font-size: 12px;"></i>
+                        </a>
                     {% endfor %}
+                {% else %}
+                    <p class="text-center text-muted small py-4">Belum ada ruang diskusi modul yang terbuka.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="d-flex flex-column bg-light h-100 flex-grow-1" style="overflow: hidden; min-width: 0;">
+            {% if id_materi_aktif and materi_aktif %}
+                <div class="p-3 bg-white border-bottom d-flex align-items-center" style="flex-shrink: 0; height: 75px;">
+                    <div class="p-2 bg-primary bg-opacity-10 text-primary rounded-3 me-3">
+                        <i class="fas fa-hashtag fa-lg"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold text-dark mb-0">Ruang Obrolan: {{ materi_aktif.judul_materi }}</h6>
+                        <small class="text-muted" style="font-size: 11px;">Saluran komunikasi interaktif materi bab ke-{{ materi_aktif.urutan }}.</small>
+                    </div>
                 </div>
 
-                <form class="reply-form" method="POST" action="{{ url_for('comment', post_id=item.id) }}">
-                    <textarea name="content" placeholder="Tulis balasan..." required></textarea>
-                    <button type="submit" class="reply-btn" aria-label="Kirim Balasan"><i class="fas fa-paper-plane"></i></button>
-                </form>
-            </div>
-            {% endfor %}
-        {% else %}
-            <div class="empty-state">
-                <i class="far fa-comments"></i>
-                <h3>Belum ada diskusi</h3>
-                <p>Jadilah yang pertama memulai diskusi!</p>
-            </div>
-        {% endif %}
+                <div class="p-4 overflow-auto d-flex flex-column gap-3" id="chatArea" style="flex-grow: 1; background-color: #f4f6f9;">
+                    {% if chat_list %}
+                        {% for c in chat_list %}
+                            {% set is_staff_sender = c.role == 'pengajar' or c.role == 'admin' %}
+                            {% set is_my_own_chat = c.id_user == session.get('user_id') %}
+                            
+                            <div class="d-flex flex-column {% if id_my_own_chat and session.get('role') != 'admin' %}with-reply-align-end{% else %}align-items-start{% endif %} w-100 msg-row">
+                                <div class="d-flex align-items-center gap-2 mb-1">
+                                    <span class="fw-bold text-dark" style="font-size: 12px;">{{ c.nama_lengkap }}</span>
+                                    {% if is_staff_sender %}
+                                        <span class="badge bg-danger rounded-pill text-uppercase" style="font-size: 8px; padding: 2px 5px;">{{ c.role }}</span>
+                                    {% endif %}
+                                    <small class="text-muted" style="font-size: 10px;">{{ c.created_at.strftime('%H:%M') if c.created_at else '' }}</small>
+                                </div>
+
+                                <div class="p-3 rounded-4 shadow-sm text-dark position-relative chat-bubble" 
+                                     style="font-size: 14px; min-width: 180px; max-width: 75%; {% if id_my_own_chat and session.get('role') != 'admin' %}background-color: #e2efff; border-top-right-radius: 0;{% else %}background-color: #ffffff; border-top-left-radius: 0;{% endif %}">
+                                    
+                                    {% if c.parent_id and c.pesan_balasan %}
+                                        <div class="p-2 mb-2 rounded bg-secondary bg-opacity-10 border-start border-primary border-3" style="font-size: 12px;">
+                                            <strong class="text-primary d-block">@{{ c.nama_balasan }}</strong>
+                                            <span class="text-muted text-truncate d-block">{{ c.pesan_balasan }}</span>
+                                        </div>
+                                    {% endif %}
+
+                                    <div class="pe-4 text-break text-dark">{{ c.pesan }}</div>
+
+                                    <div class="position-absolute bubble-actions" style="right: 8px; bottom: 6px; display: flex; gap: 8px;">
+                                        {% if session.get('role') != 'admin' %}
+                                        <button type="button" class="btn btn-sm p-0 text-muted border-0 bg-transparent" onclick="setReplyTarget('{{ c.id_chat }}', '{{ c.nama_lengkap }}', '{{ c.pesan }}')">
+                                            <i class="fas fa-reply" title="Balas"></i>
+                                        </button>
+                                        {% endif %}
+                                        
+                                        {% if session.get('role') in ['admin', 'pengajar'] or is_my_own_chat %}
+                                        <form action="{{ url_for('forum_hapus_pesan', id_chat=c.id_chat) }}" method="POST" onsubmit="return confirm('Hapus pesan ini?');" style="display: inline;">
+                                            <input type="hidden" name="id_materi" value="{{ id_materi_aktif }}">
+                                            <button type="submit" class="btn btn-sm p-0 text-danger border-0 bg-transparent">
+                                                <i class="fas fa-trash-alt" title="Hapus"></i>
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center my-auto text-muted py-5">
+                            <i class="far fa-comment-dots fa-3x mb-3 opacity-25 text-primary"></i>
+                            <p class="mb-0 small">Belum ada obrolan di grup ini. Yuk, mulai berdiskusi!</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                {% if session.get('role') != 'admin' %}
+                <div class="p-3 bg-white border-top" style="flex-shrink: 0;">
+                    <div id="replyPreviewContainer" class="d-none bg-light p-2 mb-2 rounded-3 border-start border-primary border-3 d-flex align-items-center justify-content-between">
+                        <div class="overflow-hidden">
+                            <small class="text-primary fw-bold d-block" id="replyTargetUser">Membalas Pesan...</small>
+                            <span class="text-muted small text-truncate d-block" id="replyTargetText">Isi</span>
+                        </div>
+                        <button type="button" class="btn-close" style="font-size: 10px;" onclick="cancelReply()"></button>
+                    </div>
+
+                    <form action="{{ url_for('forum_kirim_pesan') }}" method="POST" class="d-flex gap-2">
+                        <input type="hidden" name="id_materi" value="{{ id_materi_aktif }}">
+                        <input type="hidden" name="parent_id" id="parent_id_input" value="">
+                        
+                        <input type="text" name="pesan" id="chatInputField" class="form-control rounded-pill px-4" placeholder="Ketik pesan pertanyaan..." required autocomplete="off">
+                        <form style="display:none;"></form> <button type="submit" class="btn btn-primary rounded-circle d-inline-flex align-items-center justify-content-center shadow-sm" style="width: 42px; height: 42px; flex-shrink: 0; padding: 0;">
+                            <i class="fas fa-paper-plane" style="font-size: 14px;"></i>
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
+
+            {% else %}
+                <div class="text-center my-auto p-5 text-muted">
+                    <i class="fas fa-comments fa-4x mb-3 text-primary opacity-25"></i>
+                    <h5 class="fw-bold text-dark">Pusat Diskusi Terpadu</h5>
+                    <p class="mb-0 small">Silakan klik salah satu sub-grup modul pembelajaran di bilah kiri untuk membuka ruang percakapan kelas.</p>
+                </div>
+            {% endif %}
+        </div>
+
     </div>
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('visible');
-            }
-        });
-    }, { threshold: 0.1 });
-
-    document.querySelectorAll('.animate-on-scroll').forEach(el => {
-        observer.observe(el);
-    });
+function setReplyTarget(idChat, userNama, teksPesan) {
+    const container = document.getElementById('replyPreviewContainer');
+    if(container) {
+        document.getElementById('parent_id_input').value = idChat;
+        document.getElementById('replyTargetUser').innerText = "Membalas pesan dari " + userNama;
+        document.getElementById('replyTargetText').innerText = teksPesan;
+        container.classList.remove('d-none');
+        document.getElementById('chatInputField').focus();
+    }
+}
+function cancelReply() {
+    const container = document.getElementById('replyPreviewContainer');
+    if(container) {
+        document.getElementById('parent_id_input').value = "";
+        container.classList.add('d-none');
+    }
+}
+document.addEventListener("DOMContentLoaded", function() {
+    const chatArea = document.getElementById("chatArea");
+    if (chatArea) { chatArea.scrollTop = chatArea.scrollHeight; }
 });
 </script>
 {% endblock %}

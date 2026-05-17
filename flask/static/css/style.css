@@ -2,189 +2,324 @@
    1. TEMA & VARIABEL UTAMA (NAMSAN COURSE)
    ========================================================================== */
    :root {
-      --primary: #ffc714;         /* Kuning Dominan */
-      --primary-hover: #ffdd6f;   /* Kuning Hover */
-      --primary-light: #fff4ce;   /* Kuning Sangat Transparan untuk Background */
-      
-      --secondary: #1f9fcf;       /* Biru Aksen */
-      --accent-red: #dc2b31;      /* Merah Namsan */
-      --accent-red-light: #f3593f;
-      
-      --bg-main: #fefcf0;         /* Putih Hangat */
-      --bg-white: #ffffff;
-      --bg-alt: #dfdbd8;          /* Border & Shadow */
-      --dark: #292524;            /* Teks Utama */
-      
-      --sidebar-width: 260px;
-      --transition: all 0.3s ease;
-  }
-  
-  /* ==========================================================================
-     2. RESET & GLOBAL (TIDAK ADA FLEX DI BODY AGAR BASE.HTML AMAN)
-     ========================================================================== */
-  body { 
-      background-color: var(--bg-main); 
-      font-family: 'Inter', 'Poppins', sans-serif; 
-      color: var(--dark);
-      margin: 0;
-      padding: 0;
-      /* Dihapus: display: flex; agar layout Dashboard kembali normal */
-  }
-  
-  a { text-decoration: none; transition: var(--transition); }
-  
-  /* ==========================================================================
-     3. BOOTSTRAP UI OVERRIDES
-     ========================================================================== */
-  .text-primary { color: var(--primary) !important; }
-  .bg-primary { background-color: var(--primary) !important; color: var(--dark) !important; }
-  .text-danger { color: var(--accent-red) !important; }
-  .text-info { color: var(--secondary) !important; }
-  
-  /* Tombol Utama */
-  .btn-primary { 
-      background-color: var(--primary) !important; 
-      border-color: var(--primary) !important; 
-      color: var(--dark) !important; 
-      font-weight: 700; 
-  }
-  .btn-primary:hover { background-color: var(--primary-hover) !important; transform: translateY(-2px); }
-  
-  /* Tombol Outline (Garis) */
-  .btn-outline-primary { color: var(--dark) !important; border: 2px solid var(--primary) !important; }
-  .btn-outline-primary:hover { background-color: var(--primary) !important; color: var(--dark) !important; }
-  
-  .btn-outline-danger { border-color: var(--accent-red); color: var(--accent-red); }
-  .btn-outline-danger:hover { background-color: var(--accent-red); color: white; }
-  
-  /* Kartu */
-  .card { border: 2px solid var(--bg-alt) !important; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
-  
-  /* ==========================================================================
-     4. LAYOUT DASHBOARD (KHUSUS BASE.HTML)
-     ========================================================================== */
-  /* Sidebar Kiri */
-  .sidebar { 
-      width: var(--sidebar-width); 
-      background: var(--bg-white); 
-      border-right: 2px solid var(--bg-alt); 
-      height: 100vh; 
-      position: fixed; 
-      top: 0; 
-      left: 0; 
-      display: flex; 
-      flex-direction: column; 
-      z-index: 1000; 
-  }
-  
-  .sidebar-header { padding: 1.5rem; border-bottom: 2px solid var(--bg-alt); }
-  .sidebar-content { flex: 1; padding: 1rem 0; overflow-y: auto; }
-  .sidebar-footer { padding: 1.5rem; border-top: 2px solid var(--bg-alt); }
-  
-  .brand { font-size: 24px; font-weight: 800; color: var(--dark); display: flex; align-items: center; gap: 10px; }
-  .brand .logo-box { background: var(--primary); color: var(--dark); width: 35px; height: 35px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
-  
-  /* Menu Navigasi Sidebar */
-  .nav-link { 
-      color: #6c757d; 
-      padding: 0.8rem 1.5rem; 
-      display: flex; 
-      align-items: center; 
-      gap: 12px; 
-      font-weight: 600; 
-  }
-  .nav-link:hover, .nav-link.active { 
-      color: var(--dark); 
-      background: var(--primary-light); 
-      border-right: 5px solid var(--primary); 
-  }
-  .nav-link i { color: var(--secondary); font-size: 1.1rem; width: 25px; text-align: center; }
-  .nav-link.active i { color: var(--accent-red); }
-  
-  /* Konten Kanan (Samping Sidebar) */
-  .main-content { 
-      margin-left: var(--sidebar-width); 
-      min-height: 100vh; 
-      display: flex; 
-      flex-direction: column; 
-  }
-  
-  /* Header Atas */
-  .top-bar { 
-      height: 70px; 
-      background: var(--bg-white); 
-      display: flex; 
-      align-items: center; 
-      justify-content: space-between; 
-      padding: 0 2rem; 
-      border-bottom: 2px solid var(--bg-alt); 
-  }
-  
-  .search-bar { position: relative; width: 300px; }
-  .search-bar input { width: 100%; padding: 8px 15px 8px 40px; border-radius: 20px; border: 2px solid var(--bg-alt); background: var(--bg-main); }
-  .search-bar i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #adb5bd; }
-  
-  /* Area Tengah Tempat Widget Berada */
-  .content-area { flex: 1; padding: 2rem; }
-  
-  /* Kotak Profil User di Kiri Bawah */
-  .profile-box { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; }
-  .avatar-initials { 
-      background: var(--secondary); color: white; width: 45px; height: 45px; 
-      border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; 
-  }
-  .profile-info h6 { margin: 0; font-weight: 700; font-size: 15px; color: var(--dark); }
-  .profile-info small { color: #6c757d; font-size: 13px; text-transform: capitalize; }
-  
-  /* ==========================================================================
-     5. HALAMAN LOGIN & SIGNUP
-     ========================================================================== */
-  .auth-wrapper { 
-      min-height: 100vh; 
-      display: flex; 
-      align-items: center; 
-      justify-content: center; 
-      padding: 2rem 0;
-  }
-  .card-header-custom { 
-      background: linear-gradient(45deg, var(--primary), var(--primary-hover)); 
-      text-align: center; 
-      padding: 2rem; 
-      border-bottom: 3px solid var(--bg-alt);
-  }
-  .brand-title { font-size: 40px; font-weight: 800; }
-  .brand-title .edu { color: var(--accent-red); } 
-  .brand-title .sphere { color: var(--secondary); }
-  
-  /* ==========================================================================
-     6. LANDING PAGE (INDEX.HTML)
-     ========================================================================== */
-  .hero-section {
-      background: linear-gradient(135deg, rgba(255, 199, 20, 0.95), rgba(255, 221, 111, 0.9)), 
-                  url('https://images.unsplash.com/photo-1517147196903-a37ad9d19f15?q=80&w=2000');
-      background-size: cover; background-position: center;
-      color: var(--dark); 
-      padding: 8rem 0; text-align: center;
-  }
-  .hero-section h1 { font-weight: 800; font-size: 3.5rem; }
-  .feature-card { background: var(--bg-white); transition: var(--transition); }
-  .feature-card:hover { border-color: var(--primary) !important; transform: translateY(-10px); }
-  .feature-icon { font-size: 2.5rem; color: var(--secondary); }
-  .footer { background-color: var(--dark); color: var(--bg-main); padding: 2rem 0; text-align: center; border-top: 5px solid var(--primary); }
+    --primary: #ffc714;
+    --primary-hover: #ffdd6f;
+    --primary-light: #fff4ce;
 
+    --secondary: #1f9fcf;
+    --accent-red: #dc2b31;
+    --accent-red-light: #f3593f;
 
-.teacher-avatar {
+    --bg-main: #fefcf0;
+    --bg-white: #ffffff;
+    --bg-alt: #dfdbd8;
+    --dark: #292524;
+
+    --sidebar-width: 260px;
+    --transition: all 0.3s ease;
+}
+
+/* ==========================================================================
+   2. RESET & GLOBAL
+   ========================================================================== */
+body {
+    background-color: var(--bg-main);
+    font-family: 'Inter', 'Poppins', sans-serif;
+    color: var(--dark);
+    margin: 0;
+    padding: 0;
+}
+
+a {
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+/* ==========================================================================
+   3. BOOTSTRAP UI OVERRIDES
+   ========================================================================== */
+.text-primary { color: var(--primary) !important; }
+.bg-primary {
+    background-color: var(--primary) !important;
+    color: var(--dark) !important;
+}
+.text-danger { color: var(--accent-red) !important; }
+.text-info { color: var(--secondary) !important; }
+
+.btn-primary {
+    background-color: var(--primary) !important;
+    border-color: var(--primary) !important;
+    color: var(--dark) !important;
+    font-weight: 700;
+}
+.btn-primary:hover {
+    background-color: var(--primary-hover) !important;
+    transform: translateY(-2px);
+}
+
+.btn-outline-primary {
+    color: var(--dark) !important;
+    border: 2px solid var(--primary) !important;
+}
+.btn-outline-primary:hover {
+    background-color: var(--primary) !important;
+    color: var(--dark) !important;
+}
+
+.btn-outline-danger {
+    border-color: var(--accent-red);
+    color: var(--accent-red);
+}
+.btn-outline-danger:hover {
+    background-color: var(--accent-red);
+    color: white;
+}
+
+.card {
+    border: 2px solid var(--bg-alt) !important;
+    border-radius: 15px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+}
+
+/* ==========================================================================
+   4. LAYOUT DASHBOARD
+   ========================================================================== */
+.sidebar {
+    width: var(--sidebar-width);
+    background: var(--bg-white);
+    border-right: 2px solid var(--bg-alt);
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+}
+
+.sidebar-header {
+    padding: 1.5rem;
+    border-bottom: 2px solid var(--bg-alt);
+}
+
+.sidebar-content {
+    flex: 1;
+    padding: 1rem 0;
+    overflow-y: auto;
+}
+
+.sidebar-footer {
+    padding: 1.5rem;
+    border-top: 2px solid var(--bg-alt);
+}
+
+.brand {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--dark);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.brand .logo-box {
+    background: var(--primary);
+    color: var(--dark);
+    width: 35px;
+    height: 35px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.nav-link {
+    color: #6c757d;
+    padding: 0.8rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 600;
+}
+
+.nav-link:hover,
+.nav-link.active {
+    color: var(--dark);
+    background: var(--primary-light);
+    border-right: 5px solid var(--primary);
+}
+
+.nav-link i {
+    color: var(--secondary);
+    font-size: 1.1rem;
+    width: 25px;
+    text-align: center;
+}
+
+.nav-link.active i {
+    color: var(--accent-red);
+}
+
+.main-content {
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.top-bar {
+    height: 70px;
+    background: var(--bg-white);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2rem;
+    border-bottom: 2px solid var(--bg-alt);
+}
+
+.search-bar {
+    position: relative;
+    width: 300px;
+}
+
+.search-bar input {
+    width: 100%;
+    padding: 8px 15px 8px 40px;
+    border-radius: 20px;
+    border: 2px solid var(--bg-alt);
+    background: var(--bg-main);
+}
+
+.search-bar i {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #adb5bd;
+}
+
+.content-area {
+    flex: 1;
+    padding: 2rem;
+}
+
+.profile-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.avatar-initials {
+    background: var(--secondary);
+    color: white;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.profile-info h6 {
+    margin: 0;
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--dark);
+}
+
+.profile-info small {
+    color: #6c757d;
+    font-size: 13px;
+    text-transform: capitalize;
+}
+
+/* ==========================================================================
+   5. AUTH PAGE
+   ========================================================================== */
+.auth-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 0;
+}
+
+.card-header-custom {
+    background: linear-gradient(45deg, var(--primary), var(--primary-hover));
+    text-align: center;
+    padding: 2rem;
+    border-bottom: 3px solid var(--bg-alt);
+}
+
+.brand-title {
+    font-size: 40px;
+    font-weight: 800;
+}
+
+.brand-title .edu { color: var(--accent-red); }
+.brand-title .sphere { color: var(--secondary); }
+
+/* ==========================================================================
+   6. LANDING PAGE
+   ========================================================================== */
+.hero-section {
+    background:
+        linear-gradient(135deg, rgba(255, 199, 20, 0.95), rgba(255, 221, 111, 0.9)),
+        url('https://images.unsplash.com/photo-1517147196903-a37ad9d19f15?q=80&w=2000');
+    background-size: cover;
+    background-position: center;
+    color: var(--dark);
+    padding: 8rem 0;
+    text-align: center;
+}
+
+.hero-section h1 {
+    font-weight: 800;
+    font-size: 3.5rem;
+}
+
+.feature-card {
+    background: var(--bg-white);
+    transition: var(--transition);
+}
+
+.feature-card:hover {
+    border-color: var(--primary) !important;
+    transform: translateY(-10px);
+}
+
+.feature-icon {
+    font-size: 2.5rem;
+    color: var(--secondary);
+}
+
+.footer {
+    background-color: var(--dark);
+    color: var(--bg-main);
+    padding: 2rem 0;
+    text-align: center;
+    border-top: 5px solid var(--primary);
+}
+
+/* ==========================================================================
+   7. CUSTOM COMPONENTS
+   ========================================================================== */
+.teacher-avatar,
+.student-avatar {
     width: 40px;
     height: 40px;
     font-size: 14px;
+}
+
+.teacher-avatar {
     background-color: var(--primary);
     color: var(--dark);
 }
 
 .student-avatar {
-    width: 40px;
-    height: 40px;
-    font-size: 14px;
     background-color: var(--secondary);
     color: white;
 }
@@ -192,7 +327,7 @@
 .simple-keyboard {
     max-width: 800px;
     margin: 20px auto;
-    display: none; /* Sembunyikan dulu, muncul saat input diklik */
+    display: none;
     position: fixed;
     bottom: 20px;
     left: 50%;
@@ -201,4 +336,85 @@
     box-shadow: 0 10px 50px rgba(0,0,0,0.3);
     background-color: #ececec;
     border-radius: 10px;
+}
+
+.standard-modul-card {
+    border: 1px solid rgba(0,0,0,0.05) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.standard-modul-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.05) !important;
+}
+
+iframe {
+    border: none;
+    background-color: #ffffff;
+}
+
+.last-border-0:last-child {
+    border-bottom: 0 !important;
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+.max-w-75 {
+    max-width: 75%;
+}
+
+/* ==========================================================================
+   8. RESPONSIVE
+   ========================================================================== */
+@media (min-width: 992px) {
+    .border-end-lg {
+        border-right: 1px solid #dee2e6 !important;
+    }
+}
+
+/* ==========================================================================
+   9. CHAT & CHANNEL UI
+   ========================================================================== */
+.custom-channel-btn {
+background-color: #f8f9fa;
+border: 1px solid rgba(0,0,0,0.04) !important;
+transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.custom-channel-btn:hover {
+    background-color: #f1f3f5;
+    box-shadow: inset 0 0 0 1px #0d6efd, 0 2px 4px rgba(0,0,0,0.03);
+}
+
+.channel-active, .channel-active:hover {
+    background-color: rgba(13, 110, 253, 0.08) !important;
+    border-color: #0d6efd !important;
+    box-shadow: none !important;
+}
+
+.chat-bubble .bubble-actions { opacity: 0; transition: opacity 0.15s ease; }
+.chat-bubble:hover .bubble-actions { opacity: 1 !important; }
+
+.with-reply-align-end {
+    align-items: flex-end !important;
+}
+
+.custom-kelas-card {
+    border: 1px solid rgba(0,0,0,0.05) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.custom-kelas-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.04) !important;
+}
+.table th {
+    font-weight: 600;
+    color: #495057;
+    border-bottom: none !important;
+}
+.table td {
+    border-bottom: 1px solid #f2f2f2;
+}
+.table tr:last-child td {
+    border-bottom: none;
 }

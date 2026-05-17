@@ -1,128 +1,108 @@
 {% extends 'base.html' %}
-{% block title %}Kelas & Siswa Saya{% endblock %}
+{% block title %}Manajemen Kelas & Siswa{% endblock %}
 
 {% block content %}
-<style>
-    /* CSS Tambahan untuk Merapikan Card */
-    .student-card {
-        transition: transform 0.2s;
-        border: 1px solid rgba(0,0,0,0.08) !important;
-    }
-    .student-card:hover {
-        transform: translateY(-5px);
-    }
-    .student-list-container {
-        height: 350px; /* Tinggi tetap agar card sejajar */
-        overflow-y: auto;
-        padding-right: 5px;
-    }
-    /* Custom Scrollbar biar cantik */
-    .student-list-container::-webkit-scrollbar {
-        width: 4px;
-    }
-    .student-list-container::-webkit-scrollbar-thumb {
-        background: #e0e0e0;
-        border-radius: 10px;
-    }
-    .btn-action {
-        font-size: 0.7rem !important;
-        font-weight: 600;
-        border-radius: 8px;
-        padding: 6px 4px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 4px;
-    }
-</style>
-
-<div class="container-fluid">
-    <div class="mb-4">
-        <h2 class="fw-bold"><i class="fas fa-users text-primary me-2"></i>Kelas & Siswa Saya</h2>
-        <p class="text-muted">Pantau daftar kehadiran dan status kelulusan siswa di tiap kelas.</p>
+<div class="container-fluid p-0 py-2">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm rounded-4 bg-primary text-white p-4">
+                <div class="d-flex align-items-center">
+                    <div class="me-4 d-none d-md-block">
+                        <i class="fas fa-chalkboard-teacher fa-5x opacity-50"></i>
+                    </div>
+                    <div>
+                        <h2 class="fw-bold mb-1">Daftar Kelas & Siswa Aktif</h2>
+                        <p class="mb-0 opacity-75">Memantau seluruh pembagian kelas pengajaran dan data mahasiswa Namsan Korean Course secara real-time.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="row g-4">
-        {% if kelas_list %}
-            {% for k in kelas_list %}
-            <div class="col-md-6 col-xl-4">
-                <div class="card shadow-sm border-0 rounded-4 h-100 student-card">
-                    
-                    <div class="card-header bg-white border-bottom-0 pt-4 px-4" style="min-height: 100px;">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="badge bg-warning text-dark" style="font-size: 0.7rem;">{{ k.level_bahasa }}</span>
-                            <span class="small text-muted fw-bold">
-                                {% if k.tipe_kelas == 'online' %}<i class="fas fa-video text-info"></i> Online{% else %}<i class="fas fa-building text-secondary"></i> Offline{% endif %}
-                            </span>
-                        </div>
-                        <h5 class="fw-bold mb-0 text-dark text-truncate" title="{{ k.nama_kelas }}">{{ k.nama_kelas }}</h5>
-                    </div>
-
-                    <div class="card-body px-4 pt-0">
-                        <hr class="opacity-25 my-3">
-                        <h6 class="small fw-bold text-muted mb-3 text-uppercase" style="letter-spacing: 1px;">Siswa ({{ k.siswa|length }})</h6>
+        {% if daftar_kelas %}
+            {% for k in daftar_kelas %}
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden mb-2 custom-kelas-card">
                         
-                        <div class="student-list-container">
-                            {% if k.siswa %}
-                                {% for s in k.siswa %}
-                                <div class="border-bottom py-3">
-                                    <div class="d-flex align-items-center justify-content-between mb-2">
-                                        <div class="d-flex align-items-center overflow-hidden">
-                                            <div class="avatar-initials me-2 flex-shrink-0 shadow-sm" style="width: 35px; height: 35px; font-size: 13px; background-color: #f0f4f8; color: #333; display: flex; align-items: center; justify-content: center; border-radius: 10px; font-weight: bold;">
-                                                {{ s.nama_lengkap[:2].upper() }}
-                                            </div>
-                                            <div class="overflow-hidden">
-                                                <div class="small fw-bold text-dark text-truncate" style="max-width: 130px;">{{ s.nama_lengkap }}</div>
-                                                <div class="text-muted" style="font-size: 0.65rem;">ID: {{ s.id_siswa }}</div>
-                                            </div>
-                                        </div>
-                                        
-                                        {% if s.status_approval == 'Pending' %}
-                                            <span class="badge bg-warning text-dark p-1" style="font-size: 0.6rem;"><i class="fas fa-clock"></i></span>
-                                        {% elif s.status_approval == 'Approved' %}
-                                            <span class="badge bg-success p-1" style="font-size: 0.6rem;"><i class="fas fa-check"></i></span>
-                                        {% endif %}
-                                    </div>
-                                    
-                                    <div class="d-flex gap-2">
-                                        <a href="{{ url_for('pengajar_progres', id_kelas=k.id_kelas, id_siswa=s.id_siswa) }}" class="btn btn-light border shadow-sm flex-grow-1 btn-action">
-                                            <i class="fas fa-chart-line text-primary"></i> Progres
-                                        </a>
-                                        
-                                        {% if s.status_approval == 'Approved' %}
-                                            <a href="{{ url_for('static', filename='uploads/' ~ s.file_sertifikat) }}" target="_blank" class="btn btn-outline-success shadow-sm flex-grow-1 btn-action">
-                                                <i class="fas fa-certificate"></i> Cert
-                                            </a>
-                                        {% elif s.status_approval == 'Pending' %}
-                                            <button class="btn btn-light border flex-grow-1 btn-action disabled" style="opacity: 0.6;">
-                                                <i class="fas fa-hourglass-start"></i> Wait
-                                            </button>
-                                        {% else %}
-                                            <a href="{{ url_for('pengajar_sertifikat', id_siswa=s.id_siswa, id_kelas=k.id_kelas) }}" class="btn btn-light border shadow-sm flex-grow-1 btn-action text-success">
-                                                <i class="fas fa-award"></i> Lulus
-                                            </a>
-                                        {% endif %}
-                                    </div>
+                        <div class="card-header border-0 bg-light p-4 border-start border-primary border-4 d-flex justify-content-between align-items-center flex-wrap g-2">
+                            <div>
+                                <h5 class="fw-bold text-dark mb-0"><i class="fas fa-school text-primary me-2"></i>{{ k.nama_kelas }}</h5>
+                                <small class="text-muted">ID Kelas Ref: CLS-{{ k.id_kelas }}</small>
+                            </div>
+                            <div>
+                                <span class="badge bg-primary rounded-pill px-3 py-2 fw-bold shadow-sm">
+                                    <i class="fas fa-users me-1"></i> {{ k.siswa_list|length }} Siswa Terdaftar
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="card-body p-4">
+                            {% if k.siswa_list and k.siswa_list|length > 0 %}
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle border-0 mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th style="width: 10%;">No</th>
+                                                <th style="width: 15%;">ID Siswa</th>
+                                                <th style="width: 40%;">Nama Lengkap</th>
+                                                <th style="width: 35%;">Alamat Email</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for s in k.siswa_list %}
+                                                <tr>
+                                                    <td>{{ loop.index }}</td>
+                                                    <td><span class="badge bg-light text-secondary border px-2 py-1">STD-{{ s.id_siswa }}</span></td>
+                                                    <td><b class="text-dark">{{ s.nama_lengkap }}</b></td>
+                                                    <td class="text-muted small"><i class="far fa-envelope me-1 text-primary"></i> {{ s.email }}</td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
                                 </div>
-                                {% endfor %}
                             {% else %}
-                                <div class="text-center py-5">
-                                    <p class="text-muted small">Kosong</p>
+                                <div class="text-center py-4 text-muted rounded-4" style="border: 1px dashed #ddd; background-color: #fafafa;">
+                                    <i class="fas fa-user-slash fa-2x mb-2 opacity-25 text-danger"></i>
+                                    <p class="mb-0 small"><em>Belum ada siswa yang mengambil atau di-enroll ke dalam kelas ini.</em></p>
                                 </div>
                             {% endif %}
                         </div>
+
                     </div>
-                    
                 </div>
-            </div>
             {% endfor %}
         {% else %}
-            <div class="col-12 text-center py-5">
-                <div class="card shadow-sm border-0 rounded-4 p-5">
-                    <h5 class="text-muted">Belum ada kelas yang diampu.</h5>
+            <div class="col-12">
+                <div class="card border-0 shadow-sm rounded-4 p-5 text-center bg-white text-muted">
+                    <i class="fas fa-folder-open fa-4x mb-3 opacity-25 text-primary"></i>
+                    <h5 class="fw-bold">Belum Ada Data Kelas</h5>
+                    <p class="mb-0 small">Tabel `kelas` di database kamu masih kosong atau gagal dimuat.</p>
                 </div>
             </div>
         {% endif %}
     </div>
 </div>
+
+<style>
+    .custom-kelas-card {
+        border: 1px solid rgba(0,0,0,0.05) !important;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .custom-kelas-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 15px rgba(0,0,0,0.05) !important;
+    }
+    .table th {
+        font-weight: 600;
+        color: #495057;
+        border-bottom: none !important;
+    }
+    .table td {
+        border-bottom: 1px solid #f2f2f2;
+    }
+    .table tr:last-child td {
+        border-bottom: none;
+    }
+</style>
 {% endblock %}

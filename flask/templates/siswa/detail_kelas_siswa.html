@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% block title %}{{ kelas.nama_kelas }} - AdaptEd{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="mb-3">
+        <a href="{{ url_for('dashboard_siswa') }}" class="btn btn-sm btn-light rounded-pill px-3">
+            <i class="fas fa-arrow-left me-1"></i> Kembali ke Dashboard
+        </a>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 bg-dark text-white p-4 mb-4" style="background: linear-gradient(135deg, #198754 0%, #0f5132 100%);">
+        <div class="d-flex align-items-center justify-content-between">
+            <div>
+                <span class="badge bg-white text-success mb-2 rounded-pill fw-bold">Namsan Korean Course</span>
+                <h1 class="fw-bold mb-1">{{ kelas.nama_kelas }}</h1>
+                <p class="mb-0 opacity-75"><i class="fas fa-user-tie me-1"></i> Pengajar: {{ kelas.nama_pengajar }}</p>
+            </div>
+            <i class="fas fa-book-open fa-4x opacity-25 d-none d-md-block"></i>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+                <h5 class="fw-bold mb-4"><i class="fas fa-folder-open text-success me-2"></i>Materi Pembelajaran</h5>
+
+                {% if materi_list %}
+                    <div class="row g-3">
+                        {% for m in materi_list %}
+                        <div class="col-12">
+                            <div class="p-3 bg-light rounded-3 border-start border-success border-4 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="fw-bold mb-1 text-dark">{{ m.judul_materi }}</h6>
+                                    <p class="small text-muted mb-0">{{ m.deskripsi or 'Tidak ada deskripsi.' }}</p>
+                                </div>
+                                <div>
+                                    {% if m.file_path %}
+                                    <a href="{{ url_for('static', filename=m.file_path) }}" class="btn btn-sm btn-outline-success rounded-pill px-3" download>
+                                        <i class="fas fa-download me-1"></i> Download
+                                    </a>
+                                    {% else %}
+                                    <span class="badge bg-secondary rounded-pill">Hanya Baca</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="fas fa-box-open fa-3x mb-3 opacity-50"></i>
+                        <p class="mb-0">Belum ada materi yang diunggah untuk kelas ini.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-light">
+                <h6 class="fw-bold text-uppercase small text-muted mb-3">Evaluasi & Diskusi</h6>
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('daftar_kuis_siswa') }}" class="btn btn-success rounded-3 text-start py-2">
+                        <i class="fas fa-file-signature me-2"></i> Buka Kuis Kelas
+                    </a>
+                    <a href="{{ url_for('forum_siswa') }}" class="btn btn-outline-success rounded-3 text-start py-2 bg-white">
+                        <i class="fas fa-comments me-2"></i> Diskusi Kelas
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

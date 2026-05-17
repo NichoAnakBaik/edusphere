@@ -160,25 +160,57 @@ def dashboard_admin():
                            pending_sertif=pending_sertif,
                            users_terbaru=users_terbaru)
 
-@app.route('/dashboard_siswa')
+@app.route('/siswa/dashboard')
 def dashboard_siswa():
-    if session.get('role') != 'siswa': return redirect(url_for('login'))
+    # Pastikan yang masuk benar-benar siswa
+    if session.get('role') != 'siswa':
+        return redirect(url_for('login'))
+        
     db = get_db()
     cur = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    
-    # Ambil data progres modul untuk Dashboard Analytics
-    cur.execute("SELECT COUNT(*) as t FROM progres_materi WHERE id_siswa = %s AND status_selesai = TRUE", (session['user_id'],))
-    lulus_modul = cur.fetchone()['t']
-    
-    # Ambil info kelas (Online/Offline)
+    id_siswa = session.get('user_id')
+
+    # 1. Hitung Jumlah Kelas yang Diikuti Siswa
     cur.execute("""
-        SELECT k.* FROM kelas k 
-        JOIN enrollment e ON k.id_kelas = e.id_kelas 
-        WHERE e.id_siswa = %s AND e.status_aktif = TRUE
-    """, (session['user_id'],))
-    kelas_info = cur.fetchone()
-    
-    return render_template('siswa/dashboard_siswa.html', lulus_modul=lulus_modul, kelas=kelas_info)
+        SELECT COUNT(*) as jml 
+        FROM siswa_kelas 
+        WHERE id_siswa = %s
+    """, (id_siswa,))
+    res_kelas = cur.fetchone()
+    v_total_kelas = res_kelas['jml'] if res_kelas else 0
+
+    # 2. Hitung Jumlah Kuis Terpublish di Kelas Siswa
+    cur.execute("""
+        SELECT COUNT(q.id_kuis) as jml 
+        FROM kuis q
+        JOIN kelas k ON q.id_kelas = k.id_kelas
+        JOIN siswa_kelas sk ON k.id_kelas = sk.id_kelas
+        WHERE sk.id_siswa = %s AND q.is_published = true
+    """, (id_siswa,))
+    res_kuis = cur.fetchone()
+    v_total_kuis = res_kuis['jml'] if res_kuis else 0
+
+    # 3. Ambil Daftar Kelas Aktif Siswa (untuk ditampilkan di tabel/list)
+    cur.execute("""
+        SELECT k.id_kelas, k.nama_kelas, u.nama_lengkap as nama_pengajar
+        FROM kelas k
+        JOIN siswa_kelas sk ON k.id_kelas = sk.id_kelas
+        JOIN users u ON k.id_pengajar = u.id
+        WHERE sk.id_siswa = %s
+    """, (id_siswa,))
+    daftar_kelas = cur.fetchall()
+
+    cur.close()
+
+    # Bungkus data ke dalam dictionary seperti pola pengajar sebelumnya
+    data_dashboard = {
+        'total_kelas': v_total_kelas,
+        'total_kuis': v_total_kuis,
+        'nama_user': session.get('nama_lengkap', 'Haksaeng'),
+        'kelas_list': daftar_kelas
+    }
+
+    return render_template('siswa/dashboard_siswa.html', data=data_dashboard)
 
 # Pastikan rute ini yang dipanggil di browser: /pengajar/dashboard
 @app.route('/pengajar/dashboard')
@@ -214,40 +246,640 @@ def dashboard_pengajar(): # Nama fungsi ini harus sinkron dengan url_for nanti
     return render_template('pengajar/dashboard_pengajar.html', data=data_dashboard)
 
 # ==============================================================================
-# PENGAJAR
+# SISWA
 # ==============================================================================
+@app.route('/siswa/modul')
+def siswa_modul():
+    if session.get('role') != 'siswa':
+        return redirect(url_for('login'))
+        
+    id_siswa = session.get('user_id')
+    db = get_db()
+    # Menggunakan RealDictCursor agar data dari PostgreSQL mudah diolah
+    cur = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    
+    try:
+        # 1. Ambil semua materi beserta audionya (jika ada)
+        cur.execute("""
+            SELECT 
+                m.id_materi, 
+                m.judul_materi, 
+                m.file_pdf, 
+                m.urutan,
+                ma.id_audio,
+                ma.file_audio
+            FROM materi m
+            LEFT JOIN materi_audio ma ON m.id_materi = ma.id_materi
+            ORDER BY m.urutan ASC, ma.id_audio ASC
+        """)
+        rows = cur.fetchall()
+        
+        # 2. Kelompokkan audio ke dalam materi masing-masing agar 1 Materi = 1 Object Card
+        materi_dict = {}
+        for row in rows:
+            mat_id = row['id_materi']
+            if mat_id not in materi_dict:
+                materi_dict[mat_id] = {
+                    'id_materi': row['id_materi'],
+                    'judul_materi': row['judul_materi'],
+                    'file_pdf': row['file_pdf'],
+                    'urutan': row['urutan'],
+                    'audios': []
+                }
+            # Jika ada file audio terkait, masukkan ke dalam list audios
+            if row['file_audio']:
+                materi_dict[mat_id]['audios'].append({
+                    'id_audio': row['id_audio'],
+                    'file_audio': row['file_audio']
+                })
+        
+        materi_list = list(materi_dict.values())
+        
+        # 3. Cek progres kelulusan siswa hanya untuk penanda badge status (Bukan untuk mengunci tombol)
+        cur.execute("""
+            SELECT COALESCE(MAX(m.urutan), 0) as urutan_lulus
+            FROM progres_materi pm
+            JOIN materi m ON pm.id_materi = m.id_materi
+            WHERE pm.id_siswa = %s AND pm.status_selesai = TRUE
+        """, (id_siswa,))
+        res_progres = cur.fetchone()
+        urutan_lulus = res_progres['urutan_lulus'] if res_progres else 0
+        
+    except Exception as e:
+        db.rollback()
+        print(f"Error Database Modul Siswa: {e}")
+        materi_list = []
+        urutan_lulus = 0
+    finally:
+        cur.close()
 
-@app.route('/pengajar/kelas')
-def pengajar_kelas():
-    if session.get('role') != 'pengajar': 
+    return render_template('siswa/modul_siswa.html', 
+                           materi_list=materi_list, 
+                           urutan_lulus=urutan_lulus)
+
+# ==============================================================================
+# ROUTE FORUM TERPADU (Single Endpoint untuk Siswa, Pengajar, & Admin)
+# ==============================================================================
+@app.route('/forum')
+def forum():
+    if not session.get('user_id'):
+        return redirect(url_for('login'))
+        
+    id_user_aktif = session.get('user_id')
+    role_user = session.get('role') # 'siswa', 'pengajar', atau 'admin'
+    id_materi_aktif = request.args.get('id_materi', type=int)
+    
+    db = get_db()
+    cur = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    
+    daftar_forum = []
+    pesan_chat = []
+    info_materi_aktif = None
+    
+    try:
+        # LOGIKA SIDEBAR KIRI BERDASARKAN ROLE
+        if role_user == 'siswa':
+            # Siswa dibatasi sekuensial modul (hanya materi yang lulus + 1)
+            cur.execute("""
+                SELECT COALESCE(MAX(m.urutan), 0) as urutan_lulus
+                FROM progres_materi pm
+                JOIN materi m ON pm.id_materi = m.id_materi
+                WHERE pm.id_siswa = %s AND pm.status_selesai = TRUE
+            """, (id_user_aktif,))
+            res_progres = cur.fetchone()
+            maks_akses = (res_progres['urutan_lulus'] if res_progres else 0) + 1
+
+            cur.execute("SELECT id_materi, judul_materi, urutan FROM materi WHERE urutan <= %s ORDER BY urutan ASC", (maks_akses,))
+            daftar_forum = cur.fetchall()
+        else:
+            # Pengajar & Admin bisa melihat seluruh channel modul forum tanpa terkunci
+            cur.execute("SELECT id_materi, judul_materi, urutan FROM materi ORDER BY urutan ASC")
+            daftar_forum = cur.fetchall()
+            maks_akses = 999 
+            
+        # LOGIKA CHAT ROOM KANAN (JIKA ADA CHANNEL YANG DIPILIH)
+        if id_materi_aktif:
+            cur.execute("SELECT id_materi, judul_materi, urutan FROM materi WHERE id_materi = %s", (id_materi_aktif,))
+            info_materi_aktif = cur.fetchone()
+            
+            # Validasi keamanan siswa
+            if role_user == 'siswa' and info_materi_aktif and info_materi_aktif['urutan'] > maks_akses:
+                id_materi_aktif = None
+                info_materi_aktif = None
+                
+            if info_materi_aktif:
+                # Ambil seluruh chat di dalam ruang forum (Termasuk relasi pesan balasan / Self Join)
+                cur.execute("""
+                    SELECT 
+                        f.id_chat, f.pesan, f.created_at, u.nama_lengkap, u.role, f.id_user,
+                        f.parent_id, p.pesan as pesan_balasan, u_p.nama_lengkap as nama_balasan
+                    FROM forum_chat f
+                    JOIN users u ON f.id_user = u.id
+                    LEFT JOIN forum_chat p ON f.parent_id = p.id_chat
+                    LEFT JOIN users u_p ON p.id_user = u_p.id
+                    WHERE f.id_materi = %s
+                    ORDER BY f.created_at ASC
+                """, (id_materi_aktif,))
+                pesan_chat = cur.fetchall()
+
+    except Exception as e:
+        db.rollback()
+        print(f"Error pada Sistem Forum Terpadu: {e}")
+    finally:
+        cur.close()
+
+    return render_template('forum.html', 
+                           forum_list=daftar_forum, 
+                           chat_list=pesan_chat, 
+                           materi_aktif=info_materi_aktif, 
+                           id_materi_aktif=id_materi_aktif)
+
+# ==============================================================================
+# ACTION HANDLER: SIMPAN / KIRIM CHAT BARU
+# ==============================================================================
+@app.route('/forum/kirim', methods=['POST'])
+def forum_kirim_pesan():
+    if not session.get('user_id'):
+        return redirect(url_for('login'))
+        
+    id_user = session.get('user_id')
+    id_materi = request.form.get('id_materi', type=int)
+    pesan = request.form.get('pesan')
+    parent_id = request.form.get('parent_id') # Menangkap ID chat yang dibalas
+    
+    if parent_id == "" or parent_id == "null":
+        parent_id = None
+
+    if pesan and pesan.strip() != "" and id_materi:
+        db = get_db()
+        cur = db.cursor()
+        try:
+            cur.execute("""
+                INSERT INTO forum_chat (id_materi, id_user, pesan, parent_id)
+                VALUES (%s, %s, %s, %s)
+            """, (id_materi, id_user, pesan, parent_id))
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            print(f"Error Save Chat: {e}")
+        finally:
+            cur.close()
+            
+    return redirect(url_for('forum', id_materi=id_materi))
+
+
+# ==============================================================================
+# ACTION HANDLER: HAPUS CHAT (Siswa = miliknya sendiri, Pengajar & Admin = bebas)
+# ==============================================================================
+@app.route('/forum/hapus/<int:id_chat>', methods=['POST'])
+def forum_hapus_pesan(id_chat):
+    if not session.get('user_id'):
+        return redirect(url_for('login'))
+        
+    id_user_aktif = session.get('user_id')
+    role_user = session.get('role')
+    id_materi = request.form.get('id_materi', type=int)
+    
+    db = get_db()
+    cur = db.cursor()
+    
+    try:
+        if role_user in ['admin', 'pengajar']:
+            # Hak akses moderasi penuh untuk Staff Pengajar dan Admin
+            cur.execute("DELETE FROM forum_chat WHERE id_chat = %s", (id_chat,))
+        else:
+            # Proteksi keamanan: Siswa hanya bisa menghapus datanya sendiri
+            cur.execute("DELETE FROM forum_chat WHERE id_chat = %s AND id_user = %s", (id_chat, id_user_aktif))
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"Error Execution Delete Chat: {e}")
+    finally:
+        cur.close()
+        
+    return redirect(url_for('forum', id_materi=id_materi))
+
+# b. Menu Kuis dan Ujian (Sudah ada, tinggal disesuaikan)
+@app.route('/siswa/kuis')
+def daftar_kuis_siswa():
+    if session.get('role') != 'siswa': return redirect(url_for('login'))
+    return render_template('siswa/kuis.html')
+
+# DRAFT RUTE PENGIRIMAN KUIS & PENILAIAN AI (Untuk Presentasi)
+@app.route('/siswa/submit_kuis', methods=['POST'])
+def submit_kuis():
+    # 1. Ambil data jawaban siswa
+    id_siswa = session.get('user_id')
+    form_data = request.form
+    
+    # RENCANA INTEGRASI AI (Arsitektur AdaptEd):
+    # ========================================================
+    # 1. READING:
+    #    - AI mengecek apakah 'durasi_detik' terlalu cepat/lambat.
+    #    - Jika jawaban salah tapi durasi lama -> AI mendeteksi siswa kesulitan membaca Hangeul.
+    
+    # 2. WRITING:
+    #    - Teks jawaban dikirim ke LLM (OpenAI API / Gemini API).
+    #    - Prompt: "Periksa teks bahasa Korea ini, berikan skor 0-100 dan perbaiki grammar-nya."
+    #    - Hasilnya disimpan ke kolom 'feedback_ai' dan 'skor_ai'.
+    
+    # 3. SPEAKING:
+    #    - File audio dikirim ke layanan Speech-to-Text (misal: AWS Transcribe atau Whisper).
+    #    - Teks hasil transkripsi dibandingkan dengan teks asli.
+    #    - AI menghitung persentase keakuratan pelafalan (Pronunciation Score).
+    
+    # 4. LISTENING:
+    #    - AI mengecek kecocokan makna (Semantic Search) dari jawaban yang diketik siswa 
+    #      dengan transkrip asli dari audio yang diputar.
+    # ========================================================
+
+    # Simpan sementara (Mockup)
+    flash('Jawaban berhasil dikirim! AI AdaptEd sedang memproses skor dan masukan belajarmu.', 'success')
+    return redirect(url_for('siswa_dashboard'))
+
+# ==============================================================================
+# A. ROUTE HALAMAN ABSENSI & LOGBOOK SISWA
+# ==============================================================================
+@app.route('/siswa/absensi')
+def siswa_absensi():
+    if session.get('role') != 'siswa':
+        return redirect(url_for('login'))
+        
+    id_siswa = session.get('user_id')
+    db = get_db()
+    cur = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    
+    try:
+        # 1. Cek status absen hari ini (apakah sudah masuk/belum, atau sudah keluar)
+        cur.execute("""
+            SELECT id_absen, waktu_masuk, waktu_keluar, durasi_menit 
+            FROM absensi_logbook 
+            WHERE id_siswa = %s AND tanggal = CURRENT_DATE
+            ORDER BY id_absen DESC LIMIT 1
+        """, (id_siswa,))
+        absen_hari_ini = cur.fetchone()
+
+        # 2. Ambil seluruh riwayat logbook absensi siswa ke belakang
+        cur.execute("""
+            SELECT tanggal, waktu_masuk, waktu_keluar, durasi_menit 
+            FROM absensi_logbook 
+            WHERE id_siswa = %s 
+            ORDER BY tanggal DESC, waktu_masuk DESC
+        """, (id_siswa,))
+        riwayat_absen = cur.fetchall()
+        
+    except Exception as e:
+        db.rollback()
+        print(f"Error Database Absensi: {e}")
+        absen_hari_ini = None
+        riwayat_absen = []
+    finally:
+        cur.close()
+
+    return render_template('siswa/absensi.html', 
+                           absen=absen_hari_ini, 
+                           riwayat=riwayat_absen)
+
+
+# ==============================================================================
+# B. HANDLER: AKSI ABSEN MASUK (CLOCK IN)
+# ==============================================================================
+@app.route('/siswa/absensi/masuk', methods=['POST'])
+def absensi_masuk():
+    if session.get('role') != 'siswa':
+        return redirect(url_for('login'))
+        
+    id_siswa = session.get('user_id')
+    db = get_db()
+    cur = db.cursor()
+    
+    try:
+        # Insert log masuk baru untuk hari ini
+        cur.execute("""
+            INSERT INTO absensi_logbook (id_siswa, waktu_masuk, tanggal)
+            VALUES (%s, CURRENT_TIMESTAMP, CURRENT_DATE)
+        """, (id_siswa,))
+        db.commit()
+        flash('Berhasil melakukan Absen Masuk! Selamat belajar.', 'success')
+    except Exception as e:
+        db.rollback()
+        print(f"Error Clock In: {e}")
+        flash('Gagal melakukan absen masuk.', 'danger')
+    finally:
+        cur.close()
+        
+    return redirect(url_for('siswa_absensi'))
+
+
+# ==============================================================================
+# C. HANDLER: AKSI ABSEN KELUAR (CLOCK OUT + HITUNG MENIT OTOMATIS)
+# ==============================================================================
+@app.route('/siswa/absensi/keluar', methods=['POST'])
+def absensi_keluar():
+    if session.get('role') != 'siswa':
+        return redirect(url_for('login'))
+        
+    id_siswa = session.get('user_id')
+    id_absen = request.form.get('id_absen', type=int)
+    
+    db = get_db()
+    cur = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    
+    try:
+        # 1. Ambil data waktu_masuk dari record absen ini
+        cur.execute("SELECT waktu_masuk FROM absensi_logbook WHERE id_absen = %s", (id_absen,))
+        row = cur.fetchone()
+        
+        if row:
+            waktu_masuk = row['waktu_masuk']
+            waktu_keluar = datetime.now()
+            
+            # 2. Hitung selisih durasi dalam satuan Menit
+            selisih = waktu_keluar - waktu_masuk
+            durasi_menit = max(1, int(selisih.total_seconds() / 60)) # minimal terhitung 1 menit
+            
+            # 3. Update data waktu_keluar dan kolom durasi_menit ke database
+            cur.execute("""
+                UPDATE absensi_logbook 
+                SET waktu_keluar = CURRENT_TIMESTAMP, durasi_menit = %s 
+                WHERE id_absen = %s
+            """, (durasi_menit, id_absen))
+            db.commit()
+            flash(f'Berhasil Absen Keluar! Kamu telah belajar selama {durasi_menit} menit hari ini.', 'success')
+            
+    except Exception as e:
+        db.rollback()
+        print(f"Error Clock Out: {e}")
+        flash('Gagal melakukan absen keluar.', 'danger')
+    finally:
+        cur.close()
+        
+    return redirect(url_for('siswa_absensi'))
+
+# ==============================================================================
+# ROUTE ADMIN: PANTAU ABSENSI & LOGBOOK SELURUH SISWA
+# ==============================================================================
+@app.route('/admin/absensi')
+def admin_absensi():
+    if session.get('role') != 'admin':
+        return redirect(url_for('login'))
+
+    db = get_db()
+    # Menggunakan RealDictCursor agar data relasi database ditarik dalam bentuk dictionary
+    cur = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    try:
+        # Query untuk mengambil logs absensi dan digabungkan dengan data nama lengkap user siswa
+        cur.execute("""
+            SELECT al.id_absen, al.tanggal, al.waktu_masuk, al.waktu_keluar, al.durasi_menit, u.nama_lengkap
+            FROM absensi_logbook al
+            JOIN users u ON al.id_siswa = u.id
+            ORDER BY al.tanggal DESC, al.waktu_masuk DESC
+        """)
+        all_logs = cur.fetchall()
+    except Exception as e:
+        db.rollback()
+        print(f"Error Admin View Absensi: {e}")
+        all_logs = []
+    finally:
+        cur.close()
+
+    return render_template('admin/pantau_absensi.html', riwayat=all_logs)
+
+
+UPLOAD_CERT_FOLDER = 'flask/static/uploads/sertifikat'
+
+# ==============================================================================
+# A. SISI SISWA: Hanya melihat sertifikat yang SUDAH DI-ACC oleh Admin
+# ==============================================================================
+@app.route('/siswa/sertifikat')
+def siswa_sertifikat():
+    if session.get('role') != 'siswa':
+        return redirect(url_for('login'))
+        
+    id_siswa = session.get('user_id')
+    db = get_db()
+    cur = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    
+    try:
+        # Hanya menarik data sertifikat yang status_approve = TRUE
+        cur.execute("""
+            SELECT s.id_sertifikat, s.nama_sertifikat, s.file_pdf, s.tanggal_keluar, k.nama_kelas
+            FROM sertifikat s
+            LEFT JOIN kelas k ON s.id_kelas = k.id_kelas
+            WHERE s.id_siswa = %s AND s.status_approve = TRUE 
+            ORDER BY s.tanggal_keluar DESC
+        """, (id_siswa,))
+        sertifikat_list = cur.fetchall()
+    except Exception as e:
+        db.rollback()
+        print(f"Error Get Sertifikat Siswa: {e}")
+        sertifikat_list = []
+    finally:
+        cur.close()
+        
+    return render_template('siswa/sertifikat.html', sertifikat_list=sertifikat_list)
+
+
+# ==============================================================================
+# B. SISI PENGAJAR: Upload sertifikat berdasarkan Kelas & Siswa (Default: Belum ACC)
+# ==============================================================================
+@app.route('/pengajar/upload_sertifikat', methods=['GET', 'POST'])
+def pengajar_upload_sertifikat():
+    if session.get('role') != 'pengajar':
+        return redirect(url_for('login'))
+        
+    db = get_db()
+    
+    if request.method == 'POST':
+        id_kelas = request.form.get('id_kelas', type=int)
+        id_siswa = request.form.get('id_siswa', type=int)
+        nama_sertifikat = request.form.get('nama_sertifikat')
+        file = request.files.get('file_pdf')
+        
+        if id_kelas and id_siswa and nama_sertifikat and file:
+            from werkzeug.utils import secure_filename
+            filename = secure_filename(file.filename)
+            os.makedirs(UPLOAD_CERT_FOLDER, exist_ok=True)
+            
+            file_path = os.path.join(UPLOAD_CERT_FOLDER, filename)
+            file.save(file_path)
+            
+            db_path = f"uploads/sertifikat/{filename}"
+            
+            cur = db.cursor()
+            try:
+                # Disimpan dengan status_approve = FALSE (Menunggu verifikasi Admin)
+                cur.execute("""
+                    INSERT INTO sertifikat (id_siswa, id_kelas, nama_sertifikat, file_pdf, status_approve)
+                    VALUES (%s, %s, %s, %s, FALSE)
+                """, (id_siswa, id_kelas, nama_sertifikat, db_path))
+                db.commit()
+                flash('Sertifikat berhasil diajukan! Menunggu persetujuan (ACC) dari Admin.', 'success')
+            except Exception as e:
+                db.rollback()
+                print(f"Error Pengajar Insert Sertifikat: {e}")
+                flash('Gagal mengajukan sertifikat.', 'danger')
+            finally:
+                cur.close()
+                
+            return redirect(url_for('pengajar_upload_sertifikat'))
+            
+    # Ambil data Dropdown Kelas, Dropdown Siswa, dan Riwayat Ajuan Pengajar
+    cur = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    
+    cur.execute("SELECT id_kelas, nama_kelas FROM kelas ORDER BY nama_kelas ASC")
+    kelas_list = cur.fetchall()
+    
+    cur.execute("SELECT id, nama_lengkap FROM users WHERE role = 'siswa' ORDER BY nama_lengkap ASC")
+    siswa_list = cur.fetchall()
+    
+    # Riwayat sertifikat yang diupload untuk dipantau status ACC-nya oleh pengajar
+    cur.execute("""
+        SELECT s.id_sertifikat, s.nama_sertifikat, s.status_approve, s.tanggal_keluar, u.nama_lengkap, k.nama_kelas
+        FROM sertifikat s
+        JOIN users u ON s.id_siswa = u.id
+        LEFT JOIN kelas k ON s.id_kelas = k.id_kelas
+        ORDER BY s.tanggal_keluar DESC
+    """)
+    riwayat_upload = cur.fetchall()
+    cur.close()
+    
+    return render_template('pengajar/upload_sertifikat.html', 
+                           kelas_list=kelas_list, 
+                           siswa_list=siswa_list, 
+                           riwayat=riwayat_upload)
+
+
+# ==============================================================================
+# C. SISI ADMIN: Cek data ajuan, setujui (ACC), atau tolak/hapus sertifikat
+# ==============================================================================
+@app.route('/admin/manage_sertifikat')
+def admin_manage_sertifikat():
+    if session.get('role') != 'admin':
         return redirect(url_for('login'))
         
     db = get_db()
     cur = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    id_pengajar = session.get('user_id')
+    
+    try:
+        # Menampilkan seluruh ajuan sertifikat beserta status kelulusannya
+        cur.execute("""
+            SELECT s.id_sertifikat, s.nama_sertifikat, s.file_pdf, s.status_approve, s.tanggal_keluar, u.nama_lengkap, k.nama_kelas
+            FROM sertifikat s
+            JOIN users u ON s.id_siswa = u.id
+            LEFT JOIN kelas k ON s.id_kelas = k.id_kelas
+            ORDER BY s.status_approve ASC, s.tanggal_keluar DESC
+        """)
+        all_certs = cur.fetchall()
+    except Exception as e:
+        db.rollback()
+        print(f"Error Admin Get Sertifikat: {e}")
+        all_certs = []
+    finally:
+        cur.close()
+        
+    return render_template('admin/manage_sertifikat.html', certs=all_certs)
 
-    # 1. Ambil daftar kelas yang diampu
-    cur.execute("SELECT * FROM kelas WHERE id_pengajar = %s", (id_pengajar,))
-    kelas_list = cur.fetchall()
 
-    # 2. Ambil siswa + Status Kelulusan (JOIN dengan tabel sertifikat)
-    cur.execute("""
-        SELECT e.id_kelas, u.id as id_siswa, u.nama_lengkap, e.tanggal_daftar,
-               s.status_approval, s.file_sertifikat
-        FROM enrollment e
-        JOIN users u ON e.id_siswa = u.id
-        JOIN kelas k ON e.id_kelas = k.id_kelas
-        LEFT JOIN sertifikat s ON s.id_siswa = u.id AND s.id_kelas = k.id_kelas
-        WHERE k.id_pengajar = %s AND e.status_aktif = TRUE
-        ORDER BY u.nama_lengkap
-    """, (id_pengajar,))
-    siswa_list = cur.fetchall()
+# ACTION HANDLER ADMIN: ACC / APPROVE SERTIFIKAT
+@app.route('/admin/sertifikat/acc/<int:id_cert>', methods=['POST'])
+def admin_acc_sertifikat(id_cert):
+    if session.get('role') != 'admin':
+        return redirect(url_for('login'))
+        
+    db = get_db()
+    cur = db.cursor()
+    try:
+        cur.execute("UPDATE sertifikat SET status_approve = TRUE WHERE id_sertifikat = %s", (id_cert,))
+        db.commit()
+        flash('Sertifikat resmi disetujui (ACC) dan sudah bisa dilihat oleh siswa!', 'success')
+    except Exception as e:
+        db.rollback()
+        print(f"Error ACC Cert: {e}")
+    finally:
+        cur.close()
+    return redirect(url_for('admin_manage_sertifikat'))
 
-    for k in kelas_list:
-        k['siswa'] = [s for s in siswa_list if s['id_kelas'] == k['id_kelas']]
 
-    cur.close()
-    return render_template('pengajar/kelas_siswa.html', kelas_list=kelas_list)
+# ACTION HANDLER ADMIN & PENGAJAR: DROP / HAPUS SERTIFIKAT
+@app.route('/sertifikat/delete/<int:id_cert>', methods=['POST'])
+def delete_sertifikat(id_cert):
+    if session.get('role') not in ['admin', 'pengajar']:
+        return redirect(url_for('login'))
+        
+    db = get_db()
+    cur = db.cursor()
+    try:
+        cur.execute("DELETE FROM sertifikat WHERE id_sertifikat = %s", (id_cert,))
+        db.commit()
+        flash('Sertifikat berhasil dihapus/dicabut!', 'success')
+    except Exception as e:
+        db.rollback()
+        print(f"Error Delete Cert: {e}")
+    finally:
+        cur.close()
+        
+    if session.get('role') == 'admin':
+        return redirect(url_for('admin_manage_sertifikat'))
+    else:
+        return redirect(url_for('pengajar_upload_sertifikat'))
+    
+# f. Menu AI (Fokus Utama)
+@app.route('/siswa/ai-rekomendasi')
+def siswa_ai():
+    if session.get('role') != 'siswa': return redirect(url_for('login'))
+    return "<h3>[Menu F] Fokus Utama: Rekomendasi AI</h3><p>Halaman komprehensif dashboard AI interpretasi kemampuan bahasa korea siswa.</p><a href='/siswa/dashboard'>Kembali</a>"
+
+
+# ==============================================================================
+# PENGAJAR
+# ==============================================================================
+
+# ==============================================================================
+# ROUTE PENGAJAR: MELIHAT DAFTAR KELAS & MAHASISWA YANG TERDAFTAR
+# ==============================================================================
+@app.route('/pengajar/kelas_siswa')
+def pengajar_kelas_siswa():
+    if session.get('role') != 'pengajar':
+        return redirect(url_for('login'))
+        
+    db = get_db()
+    cur = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    
+    try:
+        # 1. Tarik semua data Kelas yang ada di database
+        cur.execute("SELECT id_kelas, nama_kelas FROM kelas ORDER BY nama_kelas ASC")
+        daftar_kelas = cur.fetchall()
+        
+        # 2. Tarik daftar siswa untuk masing-masing kelas tersebut
+        for k in daftar_kelas:
+            try:
+                # KITA GANTI QUERY-NYA:
+                # Langsung mencari di tabel 'users' yang punya id_kelas sama dengan kelas ini
+                cur.execute("""
+                    SELECT u.id as id_siswa, u.nama_lengkap, u.email
+                    FROM users u
+                    JOIN enrollment e ON u.id = e.id_user 
+                    WHERE e.id_kelas = %s AND u.role = 'siswa'
+                    ORDER BY u.nama_lengkap ASC
+                """, (k['id_kelas'],))
+                
+                k['siswa_list'] = cur.fetchall()
+                
+            except Exception as e_inner:
+                db.rollback()
+                print(f"Gagal ambil siswa: Tabel users mungkin tidak punya kolom id_kelas. Error: {e_inner}")
+                k['siswa_list'] = []
+                
+    except Exception as e:
+        db.rollback()
+        print(f"Error Utama Pengajar Kelas Siswa: {e}")
+        daftar_kelas = []
+    finally:
+        cur.close()
+        
+    return render_template('pengajar/kelas_siswa.html', daftar_kelas=daftar_kelas)
 
 @app.route('/pengajar/progres/<int:id_kelas>/<int:id_siswa>')
 def pengajar_progres(id_kelas, id_siswa):
@@ -539,6 +1171,47 @@ def edit_soal(id_soal, id_kuis):
     flash("Soal berhasil diperbarui!", "success")
     return redirect(url_for('pengajar_soal', id_kuis=id_kuis))
 
+@app.route('/pengajar/kuis/simpan_soal', methods=['POST'])
+def simpan_soal():
+    # Pastikan user adalah pengajar
+    if session.get('role') != 'pengajar':
+        return redirect(url_for('login'))
+
+    # Ambil data dari form (Hangeul otomatis terbaca sebagai UTF-8)
+    # Kita asumsikan ada input hidden 'id_kuis' agar tahu soal ini milik kuis mana
+    id_kuis = request.form.get('id_kuis') 
+    pertanyaan = request.form.get('pertanyaan')
+    pil_a = request.form.get('pil_a')
+    pil_b = request.form.get('pil_b')
+    pil_c = request.form.get('pil_c')
+    pil_d = request.form.get('pil_d')
+    kunci_jawaban = request.form.get('kunci_jawaban') # Tambahkan select di HTML-nya nanti
+
+    try:
+        db = get_db()
+        cur = db.cursor()
+        
+        # Query simpan ke tabel soal
+        # Sesuaikan nama kolom dengan database kamu
+        cur.execute("""
+            INSERT INTO soal (id_kuis, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, jawaban_benar)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """, (id_kuis, pertanyaan, pil_a, pil_b, pil_c, pil_d, kunci_jawaban))
+        
+        db.commit()
+        cur.close()
+        
+        # Flash message sukses (opsional)
+        # flash('Soal berhasil ditambahkan!', 'success')
+        
+    except Exception as e:
+        print(f"Error simpan soal: {e}")
+        db.rollback()
+        # flash('Gagal menyimpan soal.', 'danger')
+
+    # Kembali ke halaman kelola kuis/soal
+    return redirect(url_for('pengajar_kuis'))
+
 @app.route('/pengajar/kuis/hapus_soal/<int:id_soal>/<int:id_kuis>')
 def hapus_soal(id_soal, id_kuis):
     db = get_db()
@@ -548,95 +1221,6 @@ def hapus_soal(id_soal, id_kuis):
     cur.close()
     flash("Soal dihapus.", "warning")
     return redirect(url_for('pengajar_soal', id_kuis=id_kuis))
-
-@app.route('/pengajar/forum')
-def pengajar_forum():
-    if session.get('role') != 'pengajar': return redirect(url_for('login'))
-    db = get_db()
-    cur = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    id_pengajar = session.get('user_id')
-
-    # Pengajar hanya melihat forum dari kelas yang dia ajar
-    cur.execute("SELECT id_kelas, nama_kelas FROM kelas WHERE id_pengajar = %s", (id_pengajar,))
-    kelas_list = cur.fetchall()
-    cur.close()
-    return render_template('pengajar/forum_list.html', kelas_list=kelas_list)
-
-@app.route('/pengajar/forum/kelas/<int:id_kelas>', methods=['GET', 'POST'])
-def forum_detail(id_kelas):
-    if session.get('role') != 'pengajar': return redirect(url_for('login'))
-    db = get_db()
-    cur = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    
-    # 1. Ambil info kelas (untuk judul halaman)
-    cur.execute("SELECT nama_kelas FROM kelas WHERE id_kelas = %s", (id_kelas,))
-    kelas = cur.fetchone()
-
-    # 2. Logika jika ada postingan baru (POST)
-    if request.method == 'POST':
-        judul = request.form.get('judul')
-        pesan = request.form.get('pesan')
-        cur.execute("""
-            INSERT INTO forum_diskusi (id_kelas, id_penulis, judul, pesan) 
-            VALUES (%s, %s, %s, %s)
-        """, (id_kelas, session['user_id'], judul, pesan))
-        db.commit()
-        # Setelah posting, redirect ke halaman yang sama agar tidak double post saat refresh
-        return redirect(url_for('forum_detail', id_kelas=id_kelas))
-
-    # 3. AMBIL DAFTAR DISKUSI (Harus di luar blok IF agar diskusi_list terdefinisi)
-    # Pastikan query ini benar dan id_diskusi sesuai dengan di DB
-    cur.execute("""
-        SELECT d.*, u.nama_lengkap as penulis,
-        (SELECT COUNT(*) FROM forum_komentar k WHERE k.id_diskusi = d.id_diskusi) as jml_komentar
-        FROM forum_diskusi d
-        JOIN users u ON d.id_penulis = u.id
-        WHERE d.id_kelas = %s 
-        ORDER BY d.created_at DESC
-    """, (id_kelas,))
-    diskusi_list = cur.fetchall() # Di sini variabel didefinisikan
-    
-    cur.close()
-    
-    # Sekarang diskusi_list pasti sudah ada isinya (minimal list kosong [])
-    return render_template('pengajar/forum_detail.html', 
-                           diskusi_list=diskusi_list, 
-                           kelas=kelas, 
-                           id_kelas=id_kelas)
-
-@app.route('/pengajar/forum/diskusi/<int:id_diskusi>', methods=['GET', 'POST'])
-def diskusi_komentar(id_diskusi):
-    if session.get('role') != 'pengajar': return redirect(url_for('login'))
-    db = get_db()
-    cur = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-
-    if request.method == 'POST':
-        isi = request.form.get('isi_komentar')
-        cur.execute("INSERT INTO forum_komentar (id_diskusi, id_penulis, isi_komentar) VALUES (%s, %s, %s)",
-                    (id_diskusi, session['user_id'], isi))
-        db.commit()
-        return redirect(url_for('diskusi_komentar', id_diskusi=id_diskusi))
-
-    # Ambil postingan utama
-    cur.execute("""
-        SELECT d.*, u.nama_lengkap as penulis 
-        FROM forum_diskusi d 
-        JOIN users u ON d.id_penulis = u.id 
-        WHERE d.id_diskusi = %s
-    """, (id_diskusi,))
-    diskusi = cur.fetchone()
-
-    # Ambil semua komentar
-    cur.execute("""
-        SELECT k.*, u.nama_lengkap as penulis 
-        FROM forum_komentar k 
-        JOIN users u ON k.id_penulis = u.id 
-        WHERE k.id_diskusi = %s ORDER BY k.created_at ASC
-    """, (id_diskusi,))
-    komentar_list = cur.fetchall()
-
-    cur.close()
-    return render_template('pengajar/forum_komentar.html', diskusi=diskusi, komentar_list=komentar_list)
 
 @app.route('/pengajar/analitik')
 def pengajar_analitik():
